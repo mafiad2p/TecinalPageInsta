@@ -182,7 +182,8 @@ export async function runMigrations(): Promise<void> {
     await (client as any).query(MIGRATION_SQL);
     log.info("Database migrations completed successfully");
   } catch (err) {
-    log.error({ err }, "Database migration failed");
+    const errMsg = err instanceof Error ? `${err.message} [code=${(err as any).code}]` : String(err);
+    log.error(`Database migration failed: ${errMsg}`);
     throw err;
   } finally {
     if (client) (client as any).release();
