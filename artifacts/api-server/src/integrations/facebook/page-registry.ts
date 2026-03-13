@@ -45,6 +45,36 @@ export async function getPage(pageId: string): Promise<FacebookPage | null> {
   return page;
 }
 
+export async function getPageByInstagramId(igAccountId: string): Promise<FacebookPage | null> {
+  const cacheKey = `ig_page:${igAccountId}`;
+  const cached = await cacheGet<FacebookPage>(cacheKey);
+  if (cached) return cached;
+
+  const rows = await db.execute(
+    sql`SELECT id, page_id, page_name, access_token, instagram_account_id, is_active, config
+        FROM facebook_pages WHERE instagram_account_id = ${igAccountId} AND is_active = true LIMIT 1`
+  );
+
+  if (!rows.rows.length) {
+    log.warn({ igAccountId }, "Page not found by IG account ID");
+    return null;
+  }
+
+  const row = rows.rows[0]!;
+  const page: FacebookPage = {
+    id: row.id as number,
+    pageId: row.page_id as string,
+    pageName: row.page_name as string,
+    accessToken: row.access_token as string,
+    instagramAccountId: row.instagram_account_id as string | null,
+    isActive: row.is_active as boolean,
+    config: (row.config as Record<string, unknown>) ?? {},
+  };
+
+  await cacheSet(cacheKey, page, 600);
+  return page;
+}
+
 export async function getAllActivePages(): Promise<FacebookPage[]> {
   const rows = await db.execute(
     sql`SELECT id, page_id, page_name, access_token, instagram_account_id, is_active, config
