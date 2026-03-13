@@ -161,14 +161,30 @@ ON CONFLICT (key) DO NOTHING;
 
 export async function runMigrations(): Promise<void> {
   log.info("Running database migrations...");
-  const client = await pool.connect();
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) throw new Error("DATABASE_URL not set");
+
   try {
-    await client.query(MIGRATION_SQL);
+    const url = new URL(dbUrl);
+    log.info({ host: url.hostname, port: url.port, db: url.pathname }, "Connecting to PostgreSQL...");
+  } catch {
+    log.info({ dbUrl: dbUrl.slice(0, 30) + "..." }, "Connecting to PostgreSQL...");
+  }
+
+  const connectTimeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("PostgreSQL connection timed out after 20s")), 20000)
+  );
+
+  let client;
+  try {
+    client = await Promise.race([pool.connect(), connectTimeout]);
+    log.info("Connected to PostgreSQL, running SQL migrations...");
+    await (client as any).query(MIGRATION_SQL);
     log.info("Database migrations completed successfully");
   } catch (err) {
     log.error({ err }, "Database migration failed");
     throw err;
   } finally {
-    client.release();
+    if (client) (client as any).release();
   }
 }
