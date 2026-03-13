@@ -20,7 +20,7 @@ app.use("/api", router);
 if (process.env.NODE_ENV === "production") {
   const dashboardDist = path.resolve(process.cwd(), "artifacts/dashboard-dist");
   app.use(express.static(dashboardDist));
-  app.get("*", (_req: Request, res: Response) => {
+  app.use((_req: Request, res: Response) => {
     res.sendFile(path.join(dashboardDist, "index.html"));
   });
 }
