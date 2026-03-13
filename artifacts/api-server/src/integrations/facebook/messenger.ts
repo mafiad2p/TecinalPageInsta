@@ -13,10 +13,21 @@ export async function sendDM(
     await fbPost(pageId, accessToken, `/me/messages`, {
       recipient: { id: recipientId },
       message: { text: message },
-      messaging_type: "RESPONSE",
+      messaging_type: "MESSAGE_TAG",
+      tag: "HUMAN_AGENT",
     });
     log.info({ recipientId, pageId }, "DM sent");
   } catch (err) {
-    log.error({ recipientId, err }, "Failed to send DM");
+    log.warn({ recipientId, pageId }, "HUMAN_AGENT tag failed, retrying with RESPONSE");
+    try {
+      await fbPost(pageId, accessToken, `/me/messages`, {
+        recipient: { id: recipientId },
+        message: { text: message },
+        messaging_type: "RESPONSE",
+      });
+      log.info({ recipientId, pageId }, "DM sent (RESPONSE)");
+    } catch (err2) {
+      log.error({ recipientId, err: err2 }, "Failed to send DM");
+    }
   }
 }
