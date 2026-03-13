@@ -3,7 +3,7 @@ import { generateChatReply } from "../integrations/openai/chat.js";
 import { sendDM } from "../integrations/facebook/messenger.js";
 import { sendIGDM } from "../integrations/instagram/dm.js";
 import { alertEscalatedDM } from "../integrations/telegram/alert.js";
-import { getPage } from "../integrations/facebook/page-registry.js";
+import { getPage, getPageByInstagramId } from "../integrations/facebook/page-registry.js";
 import { getConversation, appendMessage } from "../memory/conversation.memory.js";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
@@ -28,9 +28,11 @@ export async function processDM(message: IncomingDM): Promise<void> {
 
   log2.info({ content: message.content.slice(0, 50) }, "Processing DM");
 
-  const page = await getPage(message.pageId);
+  const page = message.platform === "INSTAGRAM"
+    ? await getPageByInstagramId(message.pageId)
+    : await getPage(message.pageId);
   if (!page) {
-    log2.warn("Page not found");
+    log2.warn({ pageId: message.pageId, platform: message.platform }, "Page not found");
     return;
   }
 
