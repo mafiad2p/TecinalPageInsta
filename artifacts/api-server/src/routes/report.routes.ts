@@ -1,6 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { pool } from "@workspace/db";
 import { generateAndSendDailyReport } from "../workflows/daily-report.workflow.js";
 import { childLogger } from "../core/logger.js";
 
@@ -10,15 +9,14 @@ const log = childLogger({ module: "report-routes" });
 router.get("/reports/daily", async (req: Request, res: Response) => {
   const { from, to, limit = "30" } = req.query as Record<string, string>;
   try {
-    const rows = await db.execute(sql`
-      SELECT * FROM daily_reports
-      WHERE
-        (${from ?? null}::date IS NULL OR report_date >= ${from ?? null}::date) AND
-        (${to ?? null}::date IS NULL OR report_date <= ${to ?? null}::date)
-      ORDER BY report_date DESC
-      LIMIT ${parseInt(limit)}
-    `);
-    res.json({ success: true, data: rows.rows });
+    const result = await pool.query(
+      `SELECT * FROM daily_reports
+       WHERE ($1::date IS NULL OR report_date >= $1::date)
+         AND ($2::date IS NULL OR report_date <= $2::date)
+       ORDER BY report_date DESC LIMIT $3`,
+      [from ?? null, to ?? null, parseInt(limit)]
+    );
+    res.json({ success: true, data: result.rows });
   } catch (err) {
     log.error({ err }, "Failed to fetch reports");
     res.status(500).json({ success: false, error: "Failed to fetch reports" });
@@ -29,22 +27,24 @@ router.get("/reports/stats", async (req: Request, res: Response) => {
   const { days = "7" } = req.query as Record<string, string>;
   try {
     const [commentStats, dmStats] = await Promise.all([
-      db.execute(sql`
-        SELECT
+      pool.query(
+        `SELECT
           COUNT(*) as total,
           COUNT(*) FILTER (WHERE classified_type = 'NEGATIVE') as negative,
           COUNT(*) FILTER (WHERE classified_type = 'BUY_INTENT') as buy_intent
-        FROM comment_logs
-        WHERE processed_at >= NOW() - INTERVAL '1 day' * ${parseInt(days)}
-      `),
-      db.execute(sql`
-        SELECT
+         FROM comment_logs
+         WHERE processed_at >= NOW() - INTERVAL '1 day' * $1`,
+        [parseInt(days)]
+      ),
+      pool.query(
+        `SELECT
           COUNT(*) as total,
           COUNT(*) FILTER (WHERE escalated = true) as escalated,
           COUNT(*) FILTER (WHERE action_taken = 'AUTO_REPLY') as ai_replied
-        FROM dm_logs
-        WHERE processed_at >= NOW() - INTERVAL '1 day' * ${parseInt(days)}
-      `),
+         FROM dm_logs
+         WHERE processed_at >= NOW() - INTERVAL '1 day' * $1`,
+        [parseInt(days)]
+      ),
     ]);
 
     res.json({
@@ -74,15 +74,14 @@ router.post("/reports/generate", async (_req: Request, res: Response) => {
 router.get("/reports/logs", async (req: Request, res: Response) => {
   const { level, limit = "100", service } = req.query as Record<string, string>;
   try {
-    const rows = await db.execute(sql`
-      SELECT * FROM system_logs
-      WHERE
-        (${level ?? null} IS NULL OR level = ${level ?? null}) AND
-        (${service ?? null} IS NULL OR service = ${service ?? null})
-      ORDER BY created_at DESC
-      LIMIT ${parseInt(limit)}
-    `);
-    res.json({ success: true, data: rows.rows });
+    const result = await pool.query(
+      `SELECT * FROM system_logs
+       WHERE ($1::text IS NULL OR level = $1)
+         AND ($2::text IS NULL OR service = $2)
+       ORDER BY created_at DESC LIMIT $3`,
+      [level ?? null, service ?? null, parseInt(limit)]
+    );
+    res.json({ success: true, data: result.rows });
   } catch (err) {
     log.error({ err }, "Failed to fetch logs");
     res.status(500).json({ success: false, error: "Failed to fetch logs" });
