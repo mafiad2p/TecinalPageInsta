@@ -1,0 +1,59 @@
+modules = ["nodejs-24", "postgresql-16"]
+
+[[artifacts]]
+id = "artifacts/api-server"
+
+[[artifacts]]
+id = "artifacts/mockup-sandbox"
+
+[deployment]
+router = "application"
+deploymentTarget = "autoscale"
+
+[deployment.postBuild]
+args = ["pnpm", "store", "prune"]
+env = { "CI" = "true" }
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Redis Server"
+
+[[workflows.workflow]]
+name = "Redis Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "redis-server --port 6379 --loglevel notice"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[agent]
+stack = "PNPM_WORKSPACE"
+expertMode = true
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
+
+[nix]
+channel = "stable-25_05"
+packages = ["redis"]
+
+[userenv]
+
+[userenv.shared]
+REDIS_URL = "redis://localhost:6379"
+OPENAI_MODEL = "gpt-4o"
+FACEBOOK_VERIFY_TOKEN = "openclaw_verify_2024"
+LOG_LEVEL = "info"
+DASHBOARD_URL = "http://localhost:3001"
