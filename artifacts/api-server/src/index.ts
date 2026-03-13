@@ -6,6 +6,7 @@ import { processFacebookComment } from "./workflows/comment-moderation.workflow.
 import { processDM } from "./workflows/dm-chatbot.workflow.js";
 import { generateAndSendDailyReport } from "./workflows/daily-report.workflow.js";
 import { alertSystemError } from "./integrations/telegram/alert.js";
+import { runMigrations } from "./db/migrate.js";
 import cron from "node-cron";
 import { CRON_SCHEDULES } from "./config/constants.js";
 
@@ -16,6 +17,8 @@ if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT: "${rawPort}"
 
 async function bootstrap(): Promise<void> {
   logger.info("Bootstrapping server...");
+
+  await runMigrations();
 
   getRedis();
 
