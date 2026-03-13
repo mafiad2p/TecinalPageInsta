@@ -84,11 +84,7 @@ async function sendReply(
   message: IncomingDM,
   replyText: string
 ): Promise<void> {
-  if (message.platform === "INSTAGRAM" && page.instagramAccountId) {
-    await sendIGDM(page.pageId, page.accessToken, page.instagramAccountId, message.senderId, replyText);
-  } else {
-    await sendDM(page.pageId, page.accessToken, message.senderId, replyText);
-  }
+  await sendDM(page.pageId, page.accessToken, message.senderId, replyText);
 }
 
 async function getConfirmationReply(intent: string, _content: string): Promise<string> {
