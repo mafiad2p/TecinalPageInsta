@@ -1,9 +1,12 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes/index.js";
 import { logger } from "./core/logger.js";
-import { env } from "./config/env.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app: Express = express();
 
@@ -16,6 +19,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(pinoHttp({ logger }));
 
 app.use("/api", router);
+
+if (process.env.NODE_ENV === "production") {
+  const dashboardDist = path.resolve(__dirname, "../../dashboard-dist");
+  app.use(express.static(dashboardDist));
+  app.get("*", (_req: Request, res: Response) => {
+    res.sendFile(path.join(dashboardDist, "index.html"));
+  });
+}
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   logger.error({ err }, "Unhandled error");
