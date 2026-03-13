@@ -25,49 +25,54 @@ router.get("/webhook/facebook", (req: Request, res: Response) => {
 router.post("/webhook/facebook", (req: Request, res: Response) => {
   const body = req.body;
 
-  if (body.object !== "page") {
+  if (body.object !== "page" && body.object !== "instagram") {
     return res.sendStatus(404);
   }
 
   res.sendStatus(200);
 
+  const isInstagram = body.object === "instagram";
+
   for (const entry of body.entry ?? []) {
     const pageId = entry.id as string;
 
-    for (const change of entry.changes ?? []) {
-      if (change.field === "feed" && change.value?.item === "comment") {
-        const value = change.value;
-        enqueueTask({
-          type: "comment.process",
-          traceId: `fb-comment-${value.comment_id}`,
-          data: {
-            commentId: value.comment_id,
-            postId: value.post_id,
-            senderId: value.from?.id,
-            senderName: value.from?.name,
-            content: value.message,
-            pageId,
-            platform: "FACEBOOK",
-            isPageSelf: value.from?.id === pageId,
-          },
-        }).catch((err) => log.error({ err }, "Failed to enqueue comment"));
+    if (!isInstagram) {
+      for (const change of entry.changes ?? []) {
+        if (change.field === "feed" && change.value?.item === "comment") {
+          const value = change.value;
+          enqueueTask({
+            type: "comment.process",
+            traceId: `fb-comment-${value.comment_id}`,
+            data: {
+              commentId: value.comment_id,
+              postId: value.post_id,
+              senderId: value.from?.id,
+              senderName: value.from?.name,
+              content: value.message,
+              pageId,
+              platform: "FACEBOOK",
+              isPageSelf: value.from?.id === pageId,
+            },
+          }).catch((err) => log.error({ err }, "Failed to enqueue comment"));
+        }
       }
     }
 
     for (const event of entry.messaging ?? []) {
       if (event.message && !event.message.is_echo) {
+        const platform = isInstagram ? "INSTAGRAM" : "FACEBOOK";
         enqueueTask({
           type: "dm.process",
-          traceId: `fb-dm-${event.message.mid}`,
+          traceId: `${platform.toLowerCase()}-dm-${event.message.mid}`,
           data: {
             messageId: event.message.mid,
             senderId: event.sender?.id,
             senderName: "Customer",
             content: event.message.text ?? "",
             pageId,
-            platform: "FACEBOOK",
+            platform,
           },
-        }).catch((err) => log.error({ err }, "Failed to enqueue DM"));
+        }).catch((err) => log.error({ err }, `Failed to enqueue ${platform} DM`));
       }
     }
   }
