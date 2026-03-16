@@ -1,7 +1,6 @@
 import { classifyDMIntent } from "../integrations/openai/classifier.js";
 import { generateChatReply } from "../integrations/openai/chat.js";
 import { sendDM } from "../integrations/facebook/messenger.js";
-import { sendIGDM } from "../integrations/instagram/dm.js";
 import { alertEscalatedDM } from "../integrations/telegram/alert.js";
 import { getPage, getPageByInstagramId } from "../integrations/facebook/page-registry.js";
 import { getConversation, appendMessage } from "../memory/conversation.memory.js";
@@ -26,7 +25,7 @@ export async function processDM(message: IncomingDM): Promise<void> {
   const traceId = `dm-${message.messageId}`;
   const log2 = log.child({ traceId, messageId: message.messageId });
 
-  log2.info({ content: message.content.slice(0, 50) }, "Processing DM");
+  log2.info({ content: message.content.slice(0, 50), platform: message.platform }, "Processing DM");
 
   const page = message.platform === "INSTAGRAM"
     ? await getPageByInstagramId(message.pageId)
@@ -36,6 +35,8 @@ export async function processDM(message: IncomingDM): Promise<void> {
     return;
   }
 
+  log2.info({ resolvedPageId: page.pageId, pageName: page.pageName }, "Page resolved");
+
   const intent = await classifyDMIntent(message.content);
   log2.info({ intent }, "DM classified");
 
@@ -43,7 +44,7 @@ export async function processDM(message: IncomingDM): Promise<void> {
 
   if (needsEscalation) {
     const confirmReply = await getConfirmationReply(intent, message.content);
-    await sendReply(page, message, confirmReply);
+    await sendReply(page, message, confirmReply, log2);
 
     await alertEscalatedDM({
       pageId: page.pageId,
@@ -74,7 +75,7 @@ export async function processDM(message: IncomingDM): Promise<void> {
     timestamp: Date.now(),
   });
 
-  await sendReply(page, message, aiReply);
+  await sendReply(page, message, aiReply, log2);
   await logDM(message, intent, "AUTO_REPLY", aiReply, false);
   log2.info("General DM handled by chatbot");
 }
@@ -82,13 +83,14 @@ export async function processDM(message: IncomingDM): Promise<void> {
 async function sendReply(
   page: { pageId: string; accessToken: string; instagramAccountId: string | null },
   message: IncomingDM,
-  replyText: string
+  replyText: string,
+  log2: ReturnType<typeof log.child>
 ): Promise<void> {
-  if (message.platform === "INSTAGRAM" && page.instagramAccountId) {
-    await sendIGDM(page.pageId, page.accessToken, page.instagramAccountId, message.senderId, replyText);
-  } else {
-    await sendDM(page.pageId, page.accessToken, message.senderId, replyText);
-  }
+  log2.info(
+    { platform: message.platform, recipientId: message.senderId, pageId: page.pageId },
+    "Sending reply via Messenger Platform /me/messages"
+  );
+  await sendDM(page.pageId, page.accessToken, message.senderId, replyText);
 }
 
 async function getConfirmationReply(intent: string, _content: string): Promise<string> {

@@ -152,7 +152,7 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
 
   try {
     const result = await pool.query(
-      "SELECT access_token, instagram_account_id FROM facebook_pages WHERE page_id = $1 AND is_active = true",
+      "SELECT access_token FROM facebook_pages WHERE page_id = $1 AND is_active = true",
       [pageId]
     );
     if (result.rows.length === 0) {
@@ -160,27 +160,18 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
       return;
     }
 
-    const { access_token, instagram_account_id } = result.rows[0];
+    const { access_token } = result.rows[0];
 
-    if (platform === "INSTAGRAM" && instagram_account_id) {
-      const igResult = await axios.post(
-        `${FB_API}/${instagram_account_id}/messages`,
-        { recipient: { id: recipientId }, message: { text: message } },
-        { params: { access_token } }
-      );
-      res.json({ success: true, platform: "INSTAGRAM", response: igResult.data });
-    } else {
-      const fbResult = await axios.post(
-        `${FB_API}/me/messages`,
-        {
-          recipient: { id: recipientId },
-          message: { text: message },
-          messaging_type: "RESPONSE",
-        },
-        { params: { access_token } }
-      );
-      res.json({ success: true, platform: "FACEBOOK", response: fbResult.data });
-    }
+    const fbResult = await axios.post(
+      `${FB_API}/me/messages`,
+      {
+        recipient: { id: recipientId },
+        message: { text: message },
+        messaging_type: "RESPONSE",
+      },
+      { params: { access_token } }
+    );
+    res.json({ success: true, platform: platform || "FACEBOOK", response: fbResult.data });
   } catch (err: any) {
     const fbError = err.response?.data?.error;
     log.error({ err: fbError || err.message }, "Test send failed");
