@@ -1,0 +1,70 @@
+# OpenClaw - AI Social Media Automation Platform
+
+## Project Overview
+OpenClaw is an AI-powered social media automation system for Facebook and Instagram. It handles comment moderation, DM chatbot responses, and daily reporting via Telegram.
+
+## Architecture
+- **Replit Role**: Development environment ONLY — write code, commit, push to GitHub. NOT production.
+- **Production**: GitHub → Railway auto-deploy
+- **No long-running servers on Replit** after tasks are complete
+
+## Workflow Rules
+1. Analyze code before changes
+2. Create backup branch before modifications (e.g., `backup-before-update-YYYYMMDD`)
+3. Implement changes + basic logic testing
+4. Clear commit messages
+5. Push to GitHub via GitHub API
+6. Stop all processes on Replit after completion
+
+## Safety Principles
+- Never delete old code without backup
+- Never change system structure without analysis
+- Never break existing functionality
+- Before modifying any module: read code → check dependencies → ensure no breaking changes
+
+## Tech Stack
+- **API Server**: Express.js + TypeScript (artifacts/api-server)
+- **Dashboard**: React + Vite + Tailwind CSS (artifacts/dashboard)
+- **Database**: PostgreSQL (Drizzle ORM)
+- **Queue**: BullMQ + Redis
+- **AI**: OpenAI GPT-4o
+- **Alerts**: Telegram Bot
+- **Integrations**: Facebook Graph API v19.0, Instagram API
+
+## Project Structure
+```
+artifacts/
+  api-server/         - Express API backend
+    src/
+      config/         - env, constants, prompt-manager
+      core/           - logger, task-runner, event-bus, agent-manager
+      db/             - migrations
+      integrations/   - facebook/, instagram/, openai/, telegram/
+      memory/         - redis cache, conversation memory
+      routes/         - API endpoints
+      workflows/      - comment-moderation, dm-chatbot, daily-report
+      tools/          - rate-limiter
+  dashboard/          - React frontend
+    src/
+      pages/          - overview, products, prompts, scenarios, pages-config, reports, logs
+      components/     - layout, ui/ (shadcn-based)
+      hooks/          - React Query hooks for API
+      lib/            - api utility, cn utility
+lib/
+  db/                 - Drizzle DB connection + schema
+  api-client-react/   - Generated API client
+  api-spec/           - OpenAPI spec
+  api-zod/            - Zod validators
+```
+
+## Key Environment Variables
+- DATABASE_URL, REDIS_URL
+- OPENAI_API_KEY, OPENAI_MODEL
+- FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, FACEBOOK_VERIFY_TOKEN
+- TELEGRAM_BOT_TOKEN, TELEGRAM_ALERT_CHAT_ID
+
+## Current Facebook/Instagram Integration
+- Manual token entry via dashboard form
+- Tokens stored in `facebook_pages` table
+- Cached in Redis (10 min TTL)
+- Used by page-registry.ts for API calls
