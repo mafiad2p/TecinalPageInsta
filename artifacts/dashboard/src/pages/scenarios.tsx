@@ -8,6 +8,26 @@ import { CustomDialog } from "@/components/ui/dialog-custom";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Zap } from "lucide-react";
 
+const triggerTypeLabels: Record<string, string> = {
+  BUY_INTENT: "Ý định mua",
+  ORDER_TRACKING: "Theo dõi đơn hàng",
+  COMPLAINT: "Khiếu nại",
+  GENERAL_INQUIRY: "Câu hỏi chung",
+  ADDRESS_CHANGE: "Thay đổi địa chỉ",
+  REFUND: "Hoàn tiền",
+  PAYMENT_ISSUE: "Vấn đề thanh toán",
+};
+
+const actionTypeLabels: Record<string, string> = {
+  REPLY_AND_HIDE: "Trả lời & Ẩn",
+  AUTO_REPLY: "Tự động trả lời",
+  AUTO_REPLY_AND_ESCALATE: "Trả lời & Chuyển tiếp",
+  SKIP: "Bỏ qua",
+  DELETE: "Xóa",
+  HIDE: "Ẩn",
+  REPLY_AND_DM_AND_HIDE: "Trả lời, Nhắn tin & Ẩn",
+};
+
 export default function Scenarios() {
   const { data: scenarios, isLoading } = useScenarios();
   const createMut = useCreateScenario();
@@ -31,26 +51,26 @@ export default function Scenarios() {
         ...formData,
         triggerKeywords: formData.triggerKeywords.split(",").map(k => k.trim()).filter(Boolean),
       });
-      toast({ title: "Scenario created" });
+      toast({ title: "Đã tạo kịch bản" });
       setIsModalOpen(false);
       setFormData({ name: "", triggerType: "GENERAL_INQUIRY", triggerKeywords: "", responseTemplate: "", actionType: "AUTO_REPLY", priority: 10 });
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Lỗi", description: error.message, variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Delete this scenario?")) {
+    if (confirm("Xóa kịch bản này?")) {
       await deleteMut.mutateAsync(id);
-      toast({ title: "Deleted" });
+      toast({ title: "Đã xóa" });
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <p className="text-muted-foreground">Automated rules and quick replies for specific intents.</p>
-        <Button onClick={() => setIsModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> New Scenario</Button>
+        <p className="text-muted-foreground">Quy tắc tự động và phản hồi nhanh cho các ý định cụ thể.</p>
+        <Button onClick={() => setIsModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Kịch bản mới</Button>
       </div>
 
       <Card>
@@ -59,15 +79,15 @@ export default function Scenarios() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs uppercase text-muted-foreground bg-secondary/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Scenario Name</th>
-                  <th className="px-6 py-4 font-medium">Trigger Intent</th>
-                  <th className="px-6 py-4 font-medium">Action</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th className="px-6 py-4 font-medium">Tên kịch bản</th>
+                  <th className="px-6 py-4 font-medium">Ý định kích hoạt</th>
+                  <th className="px-6 py-4 font-medium">Hành động</th>
+                  <th className="px-6 py-4 font-medium text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={4} className="px-6 py-8 text-center">Loading...</td></tr>
+                  <tr><td colSpan={4} className="px-6 py-8 text-center">Đang tải...</td></tr>
                 ) : (
                   scenarios?.map((s) => (
                     <tr key={s.id} className="border-b border-border/50 hover:bg-secondary/20">
@@ -79,11 +99,11 @@ export default function Scenarios() {
                         <p className="text-xs text-muted-foreground mt-1 truncate max-w-xs">{s.response_template}</p>
                       </td>
                       <td className="px-6 py-4">
-                        <Badge variant="outline">{s.trigger_type}</Badge>
+                        <Badge variant="outline">{triggerTypeLabels[s.trigger_type] || s.trigger_type}</Badge>
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={s.action_type.includes('ESCALATE') ? "warning" : "secondary"}>
-                          {s.action_type.replace(/_/g, ' ')}
+                          {actionTypeLabels[s.action_type] || s.action_type.replace(/_/g, ' ')}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -103,44 +123,44 @@ export default function Scenarios() {
       <CustomDialog
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Add Scenario"
+        title="Thêm kịch bản"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Name</label>
+            <label className="text-sm font-medium">Tên</label>
             <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Trigger Intent</label>
+              <label className="text-sm font-medium">Ý định kích hoạt</label>
               <select 
                 className="flex h-11 w-full rounded-xl border-2 border-border bg-background/50 px-3 py-2 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10"
                 value={formData.triggerType}
                 onChange={e => setFormData({...formData, triggerType: e.target.value})}
               >
-                <option value="BUY_INTENT">Buy Intent</option>
-                <option value="ORDER_TRACKING">Order Tracking</option>
-                <option value="COMPLAINT">Complaint</option>
-                <option value="GENERAL_INQUIRY">General</option>
+                <option value="BUY_INTENT">Ý định mua</option>
+                <option value="ORDER_TRACKING">Theo dõi đơn hàng</option>
+                <option value="COMPLAINT">Khiếu nại</option>
+                <option value="GENERAL_INQUIRY">Câu hỏi chung</option>
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Action</label>
+              <label className="text-sm font-medium">Hành động</label>
               <select 
                 className="flex h-11 w-full rounded-xl border-2 border-border bg-background/50 px-3 py-2 text-sm focus:border-primary focus:ring-4 focus:ring-primary/10"
                 value={formData.actionType}
                 onChange={e => setFormData({...formData, actionType: e.target.value})}
               >
-                <option value="REPLY_AND_HIDE">Reply & Hide</option>
-                <option value="AUTO_REPLY">Auto Reply</option>
-                <option value="AUTO_REPLY_AND_ESCALATE">Reply & Escalate</option>
+                <option value="REPLY_AND_HIDE">Trả lời & Ẩn</option>
+                <option value="AUTO_REPLY">Tự động trả lời</option>
+                <option value="AUTO_REPLY_AND_ESCALATE">Trả lời & Chuyển tiếp</option>
               </select>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Response Template</label>
+            <label className="text-sm font-medium">Mẫu phản hồi</label>
             <Textarea 
               value={formData.responseTemplate} 
               onChange={e => setFormData({...formData, responseTemplate: e.target.value})} 
@@ -150,8 +170,8 @@ export default function Scenarios() {
           </div>
 
           <div className="pt-4 flex justify-end space-x-3">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createMut.isPending}>Save</Button>
+            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Hủy</Button>
+            <Button type="submit" disabled={createMut.isPending}>Lưu</Button>
           </div>
         </form>
       </CustomDialog>

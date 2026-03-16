@@ -25,18 +25,18 @@ export default function Prompts() {
     if (!selectedPrompt) return;
     try {
       await updateMut.mutateAsync({ key: selectedPrompt.key, promptText: editText });
-      toast({ title: "Prompt updated", description: "The AI model will use this new instruction immediately." });
+      toast({ title: "Đã cập nhật prompt", description: "Mô hình AI sẽ sử dụng hướng dẫn mới ngay lập tức." });
       setSelectedPrompt(null);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Lỗi", description: error.message, variant: "destructive" });
     }
   };
 
-  if (isLoading) return <div className="p-8 text-center">Loading prompts...</div>;
+  if (isLoading) return <div className="p-8 text-center">Đang tải prompt...</div>;
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground">Master instructions that control how the OpenClaw AI behaves.</p>
+      <p className="text-muted-foreground">Các hướng dẫn chính kiểm soát cách AI OpenClaw hoạt động.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {prompts?.map((prompt) => (
@@ -67,14 +67,14 @@ export default function Prompts() {
       <CustomDialog
         isOpen={!!selectedPrompt}
         onClose={() => setSelectedPrompt(null)}
-        title="Edit AI Prompt"
+        title="Chỉnh sửa Prompt AI"
         description={selectedPrompt?.description}
       >
         <div className="space-y-4">
           <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex items-start">
             <Sparkles className="w-5 h-5 text-primary mr-3 shrink-0 mt-0.5" />
             <p className="text-sm text-primary-foreground/80">
-              Be careful editing these instructions. They directly affect how the AI classifies intents and generates replies.
+              Hãy cẩn thận khi chỉnh sửa các hướng dẫn này. Chúng ảnh hưởng trực tiếp đến cách AI phân loại ý định và tạo phản hồi.
             </p>
           </div>
           
@@ -85,9 +85,9 @@ export default function Prompts() {
           />
 
           <div className="pt-4 flex justify-end space-x-3 border-t border-border">
-            <Button variant="ghost" onClick={() => setSelectedPrompt(null)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setSelectedPrompt(null)}>Hủy</Button>
             <Button onClick={handleSave} disabled={updateMut.isPending}>
-              {updateMut.isPending ? "Saving..." : "Save Instructions"}
+              {updateMut.isPending ? "Đang lưu..." : "Lưu hướng dẫn"}
             </Button>
           </div>
         </div>

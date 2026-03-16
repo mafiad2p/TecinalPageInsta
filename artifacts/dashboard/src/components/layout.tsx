@@ -19,13 +19,13 @@ function cn(...inputs: ClassValue[]) {
 }
 
 const navItems = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/products", label: "Products", icon: Package },
-  { href: "/prompts", label: "AI Prompts", icon: Bot },
-  { href: "/scenarios", label: "Scenarios", icon: Workflow },
-  { href: "/pages", label: "FB Pages", icon: Facebook },
-  { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/logs", label: "System Logs", icon: Terminal },
+  { href: "/", label: "Tổng quan", icon: LayoutDashboard },
+  { href: "/products", label: "Sản phẩm", icon: Package },
+  { href: "/prompts", label: "Prompt AI", icon: Bot },
+  { href: "/scenarios", label: "Kịch bản", icon: Workflow },
+  { href: "/pages", label: "Trang FB", icon: Facebook },
+  { href: "/reports", label: "Báo cáo", icon: FileText },
+  { href: "/logs", label: "Nhật ký hệ thống", icon: Terminal },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -33,7 +33,6 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex h-screen bg-background text-foreground overflow-hidden">
-      {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 border-r border-border bg-card/30 backdrop-blur-xl flex flex-col hidden md:flex">
         <div className="h-16 flex items-center px-6 border-b border-border">
           <Activity className="w-6 h-6 text-primary mr-3" />
@@ -73,22 +72,20 @@ export function Layout({ children }: { children: ReactNode }) {
               A
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium">Admin User</p>
+              <p className="text-sm font-medium">Quản trị viên</p>
               <p className="text-xs text-muted-foreground">admin@openclaw.ai</p>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        {/* Background glow effects */}
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-[120px] pointer-events-none" />
 
         <header className="h-16 flex-shrink-0 border-b border-border bg-background/50 backdrop-blur-md flex items-center px-8 z-10">
           <h1 className="text-xl font-display font-semibold">
-            {navItems.find((i) => i.href === location)?.label || "Dashboard"}
+            {navItems.find((i) => i.href === location)?.label || "Bảng điều khiển"}
           </h1>
         </header>
         <div className="flex-1 overflow-auto p-4 md:p-8 z-10">

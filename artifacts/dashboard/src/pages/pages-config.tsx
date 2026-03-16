@@ -26,33 +26,33 @@ export default function PagesConfig() {
     e.preventDefault();
     try {
       await createMut.mutateAsync(formData);
-      toast({ title: "Page added successfully" });
+      toast({ title: "Đã thêm trang thành công" });
       setIsModalOpen(false);
       setFormData({ pageId: "", pageName: "", accessToken: "", instagramAccountId: "" });
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Lỗi", description: error.message, variant: "destructive" });
     }
   };
 
   const toggleStatus = async (pageId: string, currentStatus: boolean) => {
     try {
       await updateMut.mutateAsync({ pageId, isActive: !currentStatus });
-      toast({ title: `Page ${!currentStatus ? 'activated' : 'deactivated'}` });
+      toast({ title: `Trang đã ${!currentStatus ? 'kích hoạt' : 'tạm dừng'}` });
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Lỗi", description: error.message, variant: "destructive" });
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <p className="text-muted-foreground">Connect Facebook Pages and Instagram Professional accounts.</p>
-        <Button onClick={() => setIsModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Connect Page</Button>
+        <p className="text-muted-foreground">Kết nối Trang Facebook và tài khoản Instagram chuyên nghiệp.</p>
+        <Button onClick={() => setIsModalOpen(true)}><Plus className="w-4 h-4 mr-2" /> Kết nối trang</Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {isLoading ? (
-          <p className="text-muted-foreground p-4">Loading pages...</p>
+          <p className="text-muted-foreground p-4">Đang tải danh sách trang...</p>
         ) : (
           pages?.map((page) => (
             <Card key={page.id} className={page.is_active ? "border-primary/30" : "opacity-75"}>
@@ -68,13 +68,13 @@ export default function PagesConfig() {
                     </div>
                   </div>
                   <Badge variant={page.is_active ? "success" : "secondary"}>
-                    {page.is_active ? "Listening" : "Paused"}
+                    {page.is_active ? "Đang lắng nghe" : "Tạm dừng"}
                   </Badge>
                 </div>
                 
                 <div className="mt-6 pt-6 border-t border-border flex items-center justify-between">
                   <div className="text-sm text-muted-foreground">
-                    IG Account: <span className="font-mono text-foreground">{page.instagram_account_id || "Not connected"}</span>
+                    Tài khoản IG: <span className="font-mono text-foreground">{page.instagram_account_id || "Chưa kết nối"}</span>
                   </div>
                   <Button 
                     variant={page.is_active ? "outline" : "default"} 
@@ -83,9 +83,9 @@ export default function PagesConfig() {
                     disabled={updateMut.isPending}
                   >
                     {page.is_active ? (
-                      <><PowerOff className="w-4 h-4 mr-2" /> Pause</>
+                      <><PowerOff className="w-4 h-4 mr-2" /> Tạm dừng</>
                     ) : (
-                      <><Power className="w-4 h-4 mr-2" /> Activate</>
+                      <><Power className="w-4 h-4 mr-2" /> Kích hoạt</>
                     )}
                   </Button>
                 </div>
@@ -95,27 +95,27 @@ export default function PagesConfig() {
         )}
       </div>
 
-      <CustomDialog isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Connect Facebook Page">
+      <CustomDialog isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Kết nối trang Facebook">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Page Name</label>
+            <label className="text-sm font-medium">Tên trang</label>
             <Input value={formData.pageName} onChange={e => setFormData({...formData, pageName: e.target.value})} required />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Page ID</label>
+            <label className="text-sm font-medium">ID Trang</label>
             <Input value={formData.pageId} onChange={e => setFormData({...formData, pageId: e.target.value})} required />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Page Access Token</label>
+            <label className="text-sm font-medium">Access Token của trang</label>
             <Input type="password" value={formData.accessToken} onChange={e => setFormData({...formData, accessToken: e.target.value})} required />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Instagram Account ID (Optional)</label>
+            <label className="text-sm font-medium">ID tài khoản Instagram (Tùy chọn)</label>
             <Input value={formData.instagramAccountId} onChange={e => setFormData({...formData, instagramAccountId: e.target.value})} />
           </div>
           <div className="pt-4 flex justify-end space-x-3">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createMut.isPending}>Connect</Button>
+            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Hủy</Button>
+            <Button type="submit" disabled={createMut.isPending}>Kết nối</Button>
           </div>
         </form>
       </CustomDialog>

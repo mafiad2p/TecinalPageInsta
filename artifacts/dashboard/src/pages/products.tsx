@@ -50,30 +50,30 @@ export default function Products() {
         ...formData,
         price: parseFloat(formData.price),
         currency: "USD",
-        shipping_info: { processing: "1-2 days", us_delivery: "5-7 days", global_delivery: "10-15 days" },
+        shipping_info: { processing: "1-2 ngày", us_delivery: "5-7 ngày", global_delivery: "10-15 ngày" },
         keywords: formData.name.toLowerCase().split(" "),
       };
 
       if (editingId) {
         await updateMut.mutateAsync({ id: editingId, ...payload });
-        toast({ title: "Product updated" });
+        toast({ title: "Đã cập nhật sản phẩm" });
       } else {
         await createMut.mutateAsync(payload);
-        toast({ title: "Product created" });
+        toast({ title: "Đã tạo sản phẩm" });
       }
       setIsModalOpen(false);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "Lỗi", description: error.message, variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to deactivate this product?")) {
+    if (confirm("Bạn có chắc muốn vô hiệu hóa sản phẩm này?")) {
       try {
         await deleteMut.mutateAsync(id);
-        toast({ title: "Product removed" });
+        toast({ title: "Đã vô hiệu hóa sản phẩm" });
       } catch (error: any) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        toast({ title: "Lỗi", description: error.message, variant: "destructive" });
       }
     }
   };
@@ -81,8 +81,8 @@ export default function Products() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <p className="text-muted-foreground">Manage your product knowledge base for the AI chatbot.</p>
-        <Button onClick={() => openModal()}><Plus className="w-4 h-4 mr-2" /> Add Product</Button>
+        <p className="text-muted-foreground">Quản lý danh mục sản phẩm cho chatbot AI.</p>
+        <Button onClick={() => openModal()}><Plus className="w-4 h-4 mr-2" /> Thêm sản phẩm</Button>
       </div>
 
       <Card>
@@ -91,18 +91,18 @@ export default function Products() {
             <table className="w-full text-sm text-left">
               <thead className="text-xs uppercase text-muted-foreground bg-secondary/50 border-b border-border">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Product</th>
-                  <th className="px-6 py-4 font-medium">SKU</th>
-                  <th className="px-6 py-4 font-medium">Price</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th className="px-6 py-4 font-medium">Sản phẩm</th>
+                  <th className="px-6 py-4 font-medium">Mã SKU</th>
+                  <th className="px-6 py-4 font-medium">Giá</th>
+                  <th className="px-6 py-4 font-medium">Trạng thái</th>
+                  <th className="px-6 py-4 font-medium text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">Loading...</td></tr>
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">Đang tải...</td></tr>
                 ) : products?.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">No products found.</td></tr>
+                  <tr><td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">Chưa có sản phẩm nào.</td></tr>
                 ) : (
                   products?.map((p) => (
                     <tr key={p.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
@@ -114,7 +114,7 @@ export default function Products() {
                       <td className="px-6 py-4">${p.price}</td>
                       <td className="px-6 py-4">
                         <Badge variant={p.is_active ? "success" : "secondary"}>
-                          {p.is_active ? "Active" : "Inactive"}
+                          {p.is_active ? "Hoạt động" : "Tạm dừng"}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -144,23 +144,23 @@ export default function Products() {
       <CustomDialog
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingId ? "Edit Product" : "Add Product"}
-        description="This information will be used by the AI to answer customer questions."
+        title={editingId ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm"}
+        description="Thông tin này sẽ được AI sử dụng để trả lời câu hỏi của khách hàng."
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">SKU</label>
+              <label className="text-sm font-medium">Mã SKU</label>
               <Input 
                 value={formData.sku} 
                 onChange={(e) => setFormData({...formData, sku: e.target.value})} 
                 required 
                 disabled={!!editingId}
-                placeholder="PROD-001"
+                placeholder="SP-001"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Price (USD)</label>
+              <label className="text-sm font-medium">Giá (USD)</label>
               <Input 
                 type="number" 
                 step="0.01" 
@@ -173,7 +173,7 @@ export default function Products() {
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Product Name</label>
+            <label className="text-sm font-medium">Tên sản phẩm</label>
             <Input 
               value={formData.name} 
               onChange={(e) => setFormData({...formData, name: e.target.value})} 
@@ -182,29 +182,29 @@ export default function Products() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Buy Link</label>
+            <label className="text-sm font-medium">Link mua hàng</label>
             <Input 
               type="url"
               value={formData.buy_link} 
               onChange={(e) => setFormData({...formData, buy_link: e.target.value})} 
-              placeholder="https://store.example.com/product"
+              placeholder="https://store.example.com/san-pham"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Description (For AI context)</label>
+            <label className="text-sm font-medium">Mô tả (Ngữ cảnh cho AI)</label>
             <Textarea 
               value={formData.description} 
               onChange={(e) => setFormData({...formData, description: e.target.value})} 
               className="h-24"
-              placeholder="Describe the product features, benefits, and common FAQs..."
+              placeholder="Mô tả tính năng sản phẩm, lợi ích và các câu hỏi thường gặp..."
             />
           </div>
 
           <div className="pt-4 flex justify-end space-x-3 border-t border-border">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Hủy</Button>
             <Button type="submit" disabled={createMut.isPending || updateMut.isPending}>
-              {createMut.isPending || updateMut.isPending ? "Saving..." : "Save Product"}
+              {createMut.isPending || updateMut.isPending ? "Đang lưu..." : "Lưu sản phẩm"}
             </Button>
           </div>
         </form>
