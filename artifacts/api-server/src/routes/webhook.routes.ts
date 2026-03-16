@@ -48,25 +48,42 @@ router.post("/webhook/facebook", (req: Request, res: Response) => {
 
     log.info({ pageId, isInstagram, changes: entry.changes?.length ?? 0, messaging: entry.messaging?.length ?? 0 }, "Webhook entry");
 
-    if (!isInstagram) {
-      for (const change of entry.changes ?? []) {
-        if (change.field === "feed" && change.value?.item === "comment") {
-          const value = change.value;
-          enqueueTask({
-            type: "comment.process",
-            traceId: `fb-comment-${value.comment_id}`,
-            data: {
-              commentId: value.comment_id,
-              postId: value.post_id,
-              senderId: value.from?.id,
-              senderName: value.from?.name,
-              content: value.message,
-              pageId,
-              platform: "FACEBOOK",
-              isPageSelf: value.from?.id === pageId,
-            },
-          }).catch((err) => log.error({ err }, "Failed to enqueue comment"));
-        }
+    for (const change of entry.changes ?? []) {
+      if (!isInstagram && change.field === "feed" && change.value?.item === "comment") {
+        const value = change.value;
+        enqueueTask({
+          type: "comment.process",
+          traceId: `fb-comment-${value.comment_id}`,
+          data: {
+            commentId: value.comment_id,
+            postId: value.post_id,
+            senderId: value.from?.id,
+            senderName: value.from?.name,
+            content: value.message,
+            pageId,
+            platform: "FACEBOOK",
+            isPageSelf: value.from?.id === pageId,
+          },
+        }).catch((err) => log.error({ err }, "Failed to enqueue FB comment"));
+      }
+
+      if (isInstagram && change.field === "comments") {
+        const value = change.value;
+        log.info({ commentId: value.id, from: value.from?.username }, "Incoming Instagram comment");
+        enqueueTask({
+          type: "comment.process",
+          traceId: `ig-comment-${value.id}`,
+          data: {
+            commentId: value.id,
+            postId: value.media?.id,
+            senderId: value.from?.id,
+            senderName: value.from?.username,
+            content: value.text,
+            pageId,
+            platform: "INSTAGRAM",
+            isPageSelf: false,
+          },
+        }).catch((err) => log.error({ err }, "Failed to enqueue IG comment"));
       }
     }
 
@@ -114,6 +131,27 @@ router.post("/webhook/instagram", (req: Request, res: Response) => {
     const pageId = entry.id as string;
 
     log.info({ pageId, messaging: entry.messaging?.length ?? 0, changes: entry.changes?.length ?? 0 }, "Instagram webhook entry");
+
+    for (const change of entry.changes ?? []) {
+      if (change.field === "comments") {
+        const value = change.value;
+        log.info({ commentId: value.id, from: value.from?.username }, "Incoming Instagram comment (IG endpoint)");
+        enqueueTask({
+          type: "comment.process",
+          traceId: `ig-comment-${value.id}`,
+          data: {
+            commentId: value.id,
+            postId: value.media?.id,
+            senderId: value.from?.id,
+            senderName: value.from?.username,
+            content: value.text,
+            pageId,
+            platform: "INSTAGRAM",
+            isPageSelf: false,
+          },
+        }).catch((err) => log.error({ err }, "Failed to enqueue IG comment"));
+      }
+    }
 
     for (const event of entry.messaging ?? []) {
       if (event.message && !event.message.is_echo) {
