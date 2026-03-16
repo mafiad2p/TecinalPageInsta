@@ -15,6 +15,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(pinoHttp({ logger }));
 
+app.use("/api/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 app.use("/api", router);
 
 if (process.env.NODE_ENV === "production") {

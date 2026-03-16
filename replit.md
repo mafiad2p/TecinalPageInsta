@@ -63,6 +63,10 @@ lib/
 - FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, FACEBOOK_VERIFY_TOKEN
 - TELEGRAM_BOT_TOKEN, TELEGRAM_ALERT_CHAT_ID
 
+## Version History
+- **v1.0** — Giao diện tiếng Việt + trang Cài đặt kết nối Facebook/Instagram + Backend OAuth
+- **v1.1** — Nâng cấp Sản phẩm: upload ảnh, file tài liệu, quy định vận chuyển, chính sách đổi trả, link mua hàng, AI tự động tóm tắt
+
 ## Facebook OAuth Integration
 - **OAuth Flow**: Settings page → `/api/auth/facebook/init` (generate state) → Facebook OAuth dialog → `/api/auth/facebook/callback` (exchange code → long-lived token → fetch pages → upsert DB) → redirect to dashboard
 - **Security**: CSRF protection via random state token stored in Redis (10min TTL), validated and consumed on callback
