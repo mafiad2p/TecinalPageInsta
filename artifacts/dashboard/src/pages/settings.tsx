@@ -1,39 +1,102 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card-custom";
 import { Button } from "@/components/ui/button-custom";
 import { Badge } from "@/components/ui/badge-custom";
 import { usePages } from "@/hooks/use-pages";
-import { Facebook, Instagram, Link2, Unlink, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchApi } from "@/lib/api";
+import { Facebook, Instagram, Link2, Unlink, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+
+function useSearchParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    success: params.get("success"),
+    error: params.get("error"),
+    count: params.get("count"),
+  };
+}
+
+function useFBConfig() {
+  return useQuery({
+    queryKey: ["/api/auth/facebook/config"],
+    queryFn: () => fetchApi<{ configured: boolean; appId: string | null }>("/api/auth/facebook/config"),
+  });
+}
 
 export default function SettingsPage() {
-  const { data: pages } = usePages();
+  const { data: pages, refetch: refetchPages } = usePages();
+  const { data: fbConfig } = useFBConfig();
+  const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.success) {
+      setNotification({
+        type: "success",
+        message: `Kết nối thành công ${searchParams.count || ""} trang Facebook!`,
+      });
+      refetchPages();
+      window.history.replaceState({}, "", "/settings");
+    } else if (searchParams.error) {
+      setNotification({
+        type: "error",
+        message: `Lỗi kết nối: ${searchParams.error}`,
+      });
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, []);
 
   const connectedFBPages = pages?.filter(p => p.is_active) || [];
   const connectedIGAccounts = pages?.filter(p => p.instagram_account_id && p.is_active) || [];
 
-  const handleConnectFacebook = () => {
-    const appId = (window as any).__FB_APP_ID || "";
-    if (!appId) {
-      alert("Facebook App ID chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
+  const [connecting, setConnecting] = useState(false);
+
+  const handleConnectFacebook = async () => {
+    if (!fbConfig?.configured || !fbConfig.appId) {
+      alert("Facebook App ID chưa được cấu hình trên server. Vui lòng liên hệ quản trị viên.");
       return;
     }
 
-    const redirectUri = `${window.location.origin}/api/auth/facebook/callback`;
-    const scope = [
-      "pages_show_list",
-      "pages_read_engagement",
-      "pages_manage_metadata",
-      "pages_messaging",
-      "pages_manage_posts",
-      "pages_read_user_content",
-      "instagram_basic",
-      "instagram_manage_comments",
-      "instagram_manage_messages",
-    ].join(",");
+    setConnecting(true);
+    try {
+      const initData = await fetchApi<{ state: string }>("/api/auth/facebook/init");
 
-    const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&state=openclaw_auth`;
+      const redirectUri = `${window.location.origin}/api/auth/facebook/callback`;
+      const scope = [
+        "pages_show_list",
+        "pages_read_engagement",
+        "pages_manage_metadata",
+        "pages_messaging",
+        "pages_manage_posts",
+        "pages_read_user_content",
+        "instagram_basic",
+        "instagram_manage_comments",
+        "instagram_manage_messages",
+      ].join(",");
 
-    window.location.href = authUrl;
+      const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${fbConfig.appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&state=${initData.state}`;
+
+      window.location.href = authUrl;
+    } catch (err: any) {
+      setNotification({ type: "error", message: err.message || "Không thể khởi tạo kết nối." });
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async (pageId: string) => {
+    if (!confirm("Bạn có chắc muốn ngắt kết nối trang này?")) return;
+    setDisconnecting(pageId);
+    try {
+      await fetchApi(`/api/auth/facebook/disconnect/${pageId}`, { method: "POST" });
+      await refetchPages();
+      setNotification({ type: "success", message: "Đã ngắt kết nối trang thành công." });
+    } catch (err: any) {
+      setNotification({ type: "error", message: err.message || "Không thể ngắt kết nối." });
+    } finally {
+      setDisconnecting(null);
+    }
   };
 
   return (
@@ -41,6 +104,29 @@ export default function SettingsPage() {
       <div>
         <p className="text-muted-foreground">Quản lý kết nối tài khoản và cấu hình hệ thống.</p>
       </div>
+
+      {notification && (
+        <div className={`p-4 rounded-xl border flex items-start gap-3 ${
+          notification.type === "success"
+            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+            : "bg-red-500/10 border-red-500/30 text-red-400"
+        }`}>
+          {notification.type === "success" ? (
+            <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+          )}
+          <div className="flex-1">
+            <p className="text-sm font-medium">{notification.message}</p>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-current opacity-50 hover:opacity-100 transition-opacity"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-blue-500/20">
@@ -58,7 +144,7 @@ export default function SettingsPage() {
               {connectedFBPages.length > 0 ? (
                 <Badge variant="success" className="flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  Đã kết nối
+                  Đã kết nối ({connectedFBPages.length})
                 </Badge>
               ) : (
                 <Badge variant="outline" className="flex items-center gap-1 text-muted-foreground">
@@ -81,7 +167,21 @@ export default function SettingsPage() {
                         <p className="text-xs text-muted-foreground font-mono">ID: {page.page_id}</p>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="text-xs">Đang lắng nghe</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">Đang lắng nghe</Badge>
+                      <button
+                        onClick={() => handleDisconnect(page.page_id)}
+                        disabled={disconnecting === page.page_id}
+                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400 transition-colors disabled:opacity-50"
+                        title="Ngắt kết nối"
+                      >
+                        {disconnecting === page.page_id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Unlink className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -93,12 +193,23 @@ export default function SettingsPage() {
               </div>
             )}
 
-            <Button 
+            <Button
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               onClick={handleConnectFacebook}
+              disabled={!fbConfig?.configured || connecting}
             >
-              <Link2 className="w-4 h-4 mr-2" />
-              {connectedFBPages.length > 0 ? "Kết nối thêm trang" : "Kết nối Facebook"}
+              {connecting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Link2 className="w-4 h-4 mr-2" />
+              )}
+              {!fbConfig?.configured
+                ? "Facebook App chưa cấu hình"
+                : connecting
+                  ? "Đang kết nối..."
+                  : connectedFBPages.length > 0
+                    ? "Kết nối thêm trang"
+                    : "Kết nối Facebook"}
             </Button>
           </CardContent>
         </Card>
@@ -118,7 +229,7 @@ export default function SettingsPage() {
               {connectedIGAccounts.length > 0 ? (
                 <Badge variant="success" className="flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  Đã kết nối
+                  Đã kết nối ({connectedIGAccounts.length})
                 </Badge>
               ) : (
                 <Badge variant="outline" className="flex items-center gap-1 text-muted-foreground">
@@ -153,15 +264,16 @@ export default function SettingsPage() {
               </div>
             )}
 
-            <Button 
+            <Button
               variant="outline"
               className="w-full border-pink-500/30 hover:bg-pink-500/10 text-pink-400"
               onClick={handleConnectFacebook}
+              disabled={!fbConfig?.configured || connecting}
             >
               <Link2 className="w-4 h-4 mr-2" />
               {connectedIGAccounts.length > 0 ? "Kết nối thêm tài khoản" : "Kết nối qua Facebook"}
             </Button>
-            
+
             <p className="text-xs text-muted-foreground text-center">
               Instagram Business cần được liên kết với Facebook Page để kết nối.
             </p>

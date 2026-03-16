@@ -63,8 +63,16 @@ lib/
 - FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, FACEBOOK_VERIFY_TOKEN
 - TELEGRAM_BOT_TOKEN, TELEGRAM_ALERT_CHAT_ID
 
-## Current Facebook/Instagram Integration
-- Manual token entry via dashboard form
-- Tokens stored in `facebook_pages` table
-- Cached in Redis (10 min TTL)
-- Used by page-registry.ts for API calls
+## Facebook OAuth Integration
+- **OAuth Flow**: Settings page → `/api/auth/facebook/init` (generate state) → Facebook OAuth dialog → `/api/auth/facebook/callback` (exchange code → long-lived token → fetch pages → upsert DB) → redirect to dashboard
+- **Security**: CSRF protection via random state token stored in Redis (10min TTL), validated and consumed on callback
+- **Endpoints**: 
+  - `GET /api/auth/facebook/config` — returns whether FB App is configured + App ID
+  - `GET /api/auth/facebook/init` — generates OAuth state token
+  - `GET /api/auth/facebook/callback` — handles OAuth code exchange, saves pages
+  - `POST /api/auth/facebook/disconnect/:pageId` — deactivates a page
+- **Route file**: `artifacts/api-server/src/routes/auth.routes.ts`
+- **Settings page**: `artifacts/dashboard/src/pages/settings.tsx`
+- Tokens stored in `facebook_pages` table, cached in Redis (10 min TTL)
+- Instagram Business accounts auto-detected via `instagram_business_account` field from Facebook Pages API
+- **Required env vars**: `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, optionally `API_BASE_URL` for production redirect URI

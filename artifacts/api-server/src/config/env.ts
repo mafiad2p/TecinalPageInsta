@@ -13,6 +13,7 @@ const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_ALERT_CHAT_ID: z.string().optional(),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  API_BASE_URL: z.string().optional(),
   DASHBOARD_URL: z.string().default("http://localhost:3001"),
 });
 
