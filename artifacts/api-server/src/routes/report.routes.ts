@@ -88,4 +88,46 @@ router.get("/reports/logs", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/reports/dm-logs", async (req: Request, res: Response) => {
+  const { limit = "20" } = req.query as Record<string, string>;
+  try {
+    const result = await pool.query(
+      "SELECT * FROM dm_logs ORDER BY processed_at DESC LIMIT $1",
+      [parseInt(limit)]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    log.error({ err }, "Failed to fetch DM logs");
+    res.status(500).json({ success: false, error: "Failed to fetch DM logs" });
+  }
+});
+
+router.get("/reports/webhook-debug", async (req: Request, res: Response) => {
+  const { limit = "20" } = req.query as Record<string, string>;
+  try {
+    const result = await pool.query(
+      "SELECT * FROM webhook_debug ORDER BY created_at DESC LIMIT $1",
+      [parseInt(limit)]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    log.error({ err }, "Failed to fetch webhook debug");
+    res.status(500).json({ success: false, error: "Failed to fetch webhook debug" });
+  }
+});
+
+router.get("/reports/comment-logs", async (req: Request, res: Response) => {
+  const { limit = "20" } = req.query as Record<string, string>;
+  try {
+    const result = await pool.query(
+      "SELECT * FROM comment_logs ORDER BY processed_at DESC LIMIT $1",
+      [parseInt(limit)]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    log.error({ err }, "Failed to fetch comment logs");
+    res.status(500).json({ success: false, error: "Failed to fetch comment logs" });
+  }
+});
+
 export default router;
