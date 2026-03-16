@@ -76,7 +76,7 @@ export default function SettingsPage() {
         "instagram_manage_messages",
       ].join(",");
 
-      const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${fbConfig.appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&state=${initData.state}`;
+      const authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${fbConfig.appId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}&response_type=code&state=${initData.state}`;
 
       window.location.href = authUrl;
     } catch (err: any) {

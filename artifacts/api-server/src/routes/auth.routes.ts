@@ -8,7 +8,7 @@ import { REDIS_KEYS } from "../config/constants.js";
 
 const router = Router();
 const log = childLogger({ module: "auth-routes" });
-const FB_API_BASE = "https://graph.facebook.com/v19.0";
+const FB_API_BASE = "https://graph.facebook.com/v21.0";
 
 function getAppCredentials() {
   const appId = process.env.FACEBOOK_APP_ID;

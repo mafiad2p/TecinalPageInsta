@@ -7,6 +7,7 @@ import { REDIS_KEYS } from "../config/constants.js";
 
 const router = Router();
 const log = childLogger({ module: "page-routes" });
+const FB_API = "https://graph.facebook.com/v21.0";
 
 router.get("/pages", async (_req: Request, res: Response) => {
   try {
@@ -73,7 +74,7 @@ router.post("/pages/:pageId/test-token", async (req: Request, res: Response) => 
 
     const { access_token, page_name, instagram_account_id } = result.rows[0];
 
-    const fbResult = await axios.get(`https://graph.facebook.com/v19.0/me`, {
+    const fbResult = await axios.get(`${FB_API}/me`, {
       params: { access_token, fields: "id,name" },
     });
 
@@ -90,7 +91,7 @@ router.post("/pages/:pageId/test-token", async (req: Request, res: Response) => 
 
     if (instagram_account_id) {
       try {
-        const igResult = await axios.get(`https://graph.facebook.com/v19.0/${instagram_account_id}`, {
+        const igResult = await axios.get(`${FB_API}/${instagram_account_id}`, {
           params: { access_token, fields: "id,username,name,profile_picture_url" },
         });
         response.data.instagram = igResult.data;
@@ -99,10 +100,33 @@ router.post("/pages/:pageId/test-token", async (req: Request, res: Response) => 
       }
     }
 
-    const permsResult = await axios.get(`https://graph.facebook.com/v19.0/${pageId}/subscribed_apps`, {
+    const permsResult = await axios.get(`${FB_API}/${pageId}/subscribed_apps`, {
       params: { access_token },
     });
     response.data.subscribed_fields = permsResult.data;
+
+    const { appId, appSecret } = getAppCredentials();
+    if (appId && appSecret) {
+      try {
+        const debugResult = await axios.get(`${FB_API}/debug_token`, {
+          params: {
+            input_token: access_token,
+            access_token: `${appId}|${appSecret}`,
+          },
+        });
+        const tokenData = debugResult.data?.data;
+        response.data.token_debug = {
+          app_id: tokenData?.app_id,
+          type: tokenData?.type,
+          is_valid: tokenData?.is_valid,
+          scopes: tokenData?.scopes,
+          granular_scopes: tokenData?.granular_scopes,
+          expires_at: tokenData?.expires_at,
+        };
+      } catch (debugErr: any) {
+        response.data.token_debug_error = debugErr.response?.data?.error?.message || debugErr.message;
+      }
+    }
 
     res.json(response);
   } catch (err: any) {
@@ -140,14 +164,14 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
 
     if (platform === "INSTAGRAM" && instagram_account_id) {
       const igResult = await axios.post(
-        `https://graph.facebook.com/v19.0/${instagram_account_id}/messages`,
+        `${FB_API}/${instagram_account_id}/messages`,
         { recipient: { id: recipientId }, message: { text: message } },
         { params: { access_token } }
       );
       res.json({ success: true, platform: "INSTAGRAM", response: igResult.data });
     } else {
       const fbResult = await axios.post(
-        `https://graph.facebook.com/v19.0/me/messages`,
+        `${FB_API}/me/messages`,
         {
           recipient: { id: recipientId },
           message: { text: message },
@@ -164,8 +188,18 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
       success: false,
       error: fbError?.message || err.message,
       fb_error_code: fbError?.code,
+      fb_error_subcode: fbError?.error_subcode,
+      fb_error_type: fbError?.type,
+      fb_fbtrace_id: fbError?.fbtrace_id,
     });
   }
 });
+
+function getAppCredentials() {
+  return {
+    appId: process.env.FACEBOOK_APP_ID,
+    appSecret: process.env.FACEBOOK_APP_SECRET,
+  };
+}
 
 export default router;

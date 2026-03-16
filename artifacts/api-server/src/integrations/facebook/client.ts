@@ -3,7 +3,7 @@ import { withRateLimit } from "../../tools/rate-limiter.js";
 import { childLogger } from "../../core/logger.js";
 
 const log = childLogger({ module: "facebook-client" });
-const FB_API_BASE = "https://graph.facebook.com/v19.0";
+const FB_API_BASE = "https://graph.facebook.com/v21.0";
 
 export async function fbGet<T>(
   pageId: string,
