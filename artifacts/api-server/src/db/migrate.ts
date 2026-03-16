@@ -108,6 +108,14 @@ CREATE TABLE IF NOT EXISTS system_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS webhook_debug (
+  id          SERIAL PRIMARY KEY,
+  endpoint    TEXT NOT NULL,
+  object_type TEXT,
+  raw_body    JSONB,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS product_pages (
   id          SERIAL PRIMARY KEY,
   product_id  INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,

@@ -84,18 +84,22 @@ async function sendReply(
   message: IncomingDM,
   replyText: string
 ): Promise<void> {
-  await sendDM(page.pageId, page.accessToken, message.senderId, replyText);
+  if (message.platform === "INSTAGRAM" && page.instagramAccountId) {
+    await sendIGDM(page.pageId, page.accessToken, page.instagramAccountId, message.senderId, replyText);
+  } else {
+    await sendDM(page.pageId, page.accessToken, message.senderId, replyText);
+  }
 }
 
 async function getConfirmationReply(intent: string, _content: string): Promise<string> {
   const replies: Record<string, string> = {
-    ORDER_TRACKING: "Thank you for reaching out about your order! 📦 Our team has been notified and will update you on your tracking status shortly.",
-    ADDRESS_CHANGE: "We've received your address change request! 📍 Our team will process this and confirm the update shortly.",
-    COMPLAINT: "We're truly sorry to hear about your experience. 🙏 Our team has been notified and will contact you shortly to resolve this.",
-    REFUND: "We've received your refund request. 💰 Our team will review it and get back to you within 1-2 business days.",
-    PAYMENT_ISSUE: "We've flagged your payment issue. 💳 Our team will look into this and contact you shortly.",
+    ORDER_TRACKING: "Cảm ơn bạn đã liên hệ về đơn hàng! 📦 Đội ngũ của chúng tôi đã nhận thông tin và sẽ cập nhật trạng thái cho bạn sớm nhất.",
+    ADDRESS_CHANGE: "Chúng tôi đã nhận yêu cầu thay đổi địa chỉ của bạn! 📍 Đội ngũ sẽ xử lý và xác nhận cập nhật sớm nhất.",
+    COMPLAINT: "Chúng tôi rất tiếc về trải nghiệm của bạn. 🙏 Đội ngũ đã được thông báo và sẽ liên hệ bạn sớm nhất để giải quyết.",
+    REFUND: "Chúng tôi đã nhận yêu cầu hoàn tiền của bạn. 💰 Đội ngũ sẽ xem xét và phản hồi trong 1-2 ngày làm việc.",
+    PAYMENT_ISSUE: "Chúng tôi đã ghi nhận vấn đề thanh toán của bạn. 💳 Đội ngũ sẽ kiểm tra và liên hệ bạn sớm nhất.",
   };
-  return replies[intent] ?? "Thank you for your message! Our team will get back to you shortly. 😊";
+  return replies[intent] ?? "Cảm ơn bạn đã nhắn tin! Đội ngũ của chúng tôi sẽ phản hồi bạn sớm nhất. 😊";
 }
 
 async function logDM(
