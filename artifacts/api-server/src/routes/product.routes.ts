@@ -162,8 +162,8 @@ async function readDocumentContent(filePath: string, originalName: string): Prom
 }
 
 async function attachProductPages(productId: number, pageIds: string[]) {
-  if (!pageIds || pageIds.length === 0) return;
   await pool.query("DELETE FROM product_pages WHERE product_id = $1", [productId]);
+  if (!pageIds || pageIds.length === 0) return;
   for (const pageId of pageIds) {
     await pool.query(
       "INSERT INTO product_pages (product_id, page_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
@@ -311,27 +311,32 @@ router.put("/products/:id", (req: Request, res: Response) => {
 
       const priceValue = price !== undefined && price !== "" ? parseFloat(price) : null;
 
+      const setClauses: string[] = [];
+      const values: any[] = [];
+      let paramIdx = 1;
+
+      if (name !== undefined) { setClauses.push(`name = $${paramIdx++}`); values.push(name); }
+      if (description !== undefined) { setClauses.push(`description = $${paramIdx++}`); values.push(description); }
+      setClauses.push(`price = $${paramIdx++}`); values.push(priceValue);
+      if (buyLink !== undefined) { setClauses.push(`buy_link = $${paramIdx++}`); values.push(buyLink); }
+      if (shippingRules !== undefined) { setClauses.push(`shipping_rules = $${paramIdx++}`); values.push(shippingRules); }
+      if (returnPolicy !== undefined) { setClauses.push(`return_policy = $${paramIdx++}`); values.push(returnPolicy); }
+      if (keywords) {
+        setClauses.push(`keywords = $${paramIdx++}`);
+        values.push(typeof keywords === "string" ? keywords.split(",").map((k: string) => k.trim()) : keywords);
+      }
+      if (isActive !== undefined) {
+        setClauses.push(`is_active = $${paramIdx++}`);
+        values.push(isActive === "true" || isActive === true);
+      }
+      if (imageUrl) { setClauses.push(`image_url = $${paramIdx++}`); values.push(imageUrl); }
+      if (productDocs) { setClauses.push(`product_docs = $${paramIdx++}`); values.push(productDocs); }
+      setClauses.push("updated_at = NOW()");
+      values.push(id);
+
       await pool.query(
-        `UPDATE products SET
-          name = COALESCE($1, name),
-          description = COALESCE($2, description),
-          price = COALESCE($3, price),
-          buy_link = COALESCE($4, buy_link),
-          shipping_rules = COALESCE($5, shipping_rules),
-          return_policy = COALESCE($6, return_policy),
-          keywords = COALESCE($7, keywords),
-          is_active = COALESCE($8, is_active),
-          image_url = COALESCE($9, image_url),
-          product_docs = COALESCE($10, product_docs),
-          updated_at = NOW()
-         WHERE id = $11`,
-        [
-          name || null, description || null, priceValue,
-          buyLink || null, shippingRules || null, returnPolicy || null,
-          keywords ? (typeof keywords === "string" ? keywords.split(",").map((k: string) => k.trim()) : keywords) : null,
-          isActive !== undefined ? isActive === "true" || isActive === true : null,
-          imageUrl, productDocs, id
-        ]
+        `UPDATE products SET ${setClauses.join(", ")} WHERE id = $${paramIdx}`,
+        values
       );
 
       if (assignedPages) {

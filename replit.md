@@ -66,6 +66,12 @@ lib/
 ## Version History
 - **v1.0** — Giao diện tiếng Việt + trang Cài đặt kết nối Facebook/Instagram + Backend OAuth
 - **v1.1** — Nâng cấp Sản phẩm: upload ảnh, file tài liệu, quy định vận chuyển, chính sách đổi trả, link mua hàng, AI tự động tóm tắt
+- **v1.2** — Giá tùy chọn, AI scrape link mua hàng, gắn sản phẩm↔Page (product_pages junction table), auto-migration khi server khởi động (không cần chạy SQL thủ công trên Railway)
+
+## Auto-Migration
+- File: `artifacts/api-server/src/db/migrate.ts`
+- Chạy tự động khi server bootstrap — `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE` an toàn (kiểm tra cột trước khi thêm)
+- Không cần chạy SQL thủ công trên Railway khi có schema changes
 
 ## Facebook OAuth Integration
 - **OAuth Flow**: Settings page → `/api/auth/facebook/init` (generate state) → Facebook OAuth dialog → `/api/auth/facebook/callback` (exchange code → long-lived token → fetch pages → upsert DB) → redirect to dashboard

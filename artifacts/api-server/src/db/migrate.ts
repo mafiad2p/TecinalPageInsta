@@ -108,6 +108,35 @@ CREATE TABLE IF NOT EXISTS system_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS product_pages (
+  id          SERIAL PRIMARY KEY,
+  product_id  INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  page_id     TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(product_id, page_id)
+);
+
+ALTER TABLE products ALTER COLUMN price DROP NOT NULL;
+ALTER TABLE products ALTER COLUMN price SET DEFAULT NULL;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='image_url') THEN
+    ALTER TABLE products ADD COLUMN image_url TEXT;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='shipping_rules') THEN
+    ALTER TABLE products ADD COLUMN shipping_rules TEXT DEFAULT '';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='return_policy') THEN
+    ALTER TABLE products ADD COLUMN return_policy TEXT DEFAULT '';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='product_docs') THEN
+    ALTER TABLE products ADD COLUMN product_docs TEXT DEFAULT '';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='ai_summary') THEN
+    ALTER TABLE products ADD COLUMN ai_summary TEXT DEFAULT '';
+  END IF;
+END $$;
+
 INSERT INTO ai_prompts (key, description, prompt_text) VALUES
 (
   'comment.classify',
