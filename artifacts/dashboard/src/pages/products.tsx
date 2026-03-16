@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, useRegenerateSummary, Product } from "@/hooks/use-products";
+import { usePages } from "@/hooks/use-pages";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card-custom";
 import { Button } from "@/components/ui/button-custom";
 import { Input, Textarea } from "@/components/ui/input-custom";
 import { Badge } from "@/components/ui/badge-custom";
 import { CustomDialog } from "@/components/ui/dialog-custom";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, ExternalLink, ImagePlus, FileText, RefreshCw, Loader2, Package, ShoppingCart, Truck, ShieldCheck, Brain, X, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2, ExternalLink, ImagePlus, FileText, RefreshCw, Loader2, Package, ShoppingCart, Truck, ShieldCheck, Brain, X, Eye, Facebook, Check } from "lucide-react";
 
 type FormState = {
   sku: string;
@@ -16,6 +17,7 @@ type FormState = {
   buy_link: string;
   shipping_rules: string;
   return_policy: string;
+  assigned_pages: string[];
 };
 
 const emptyForm: FormState = {
@@ -26,10 +28,12 @@ const emptyForm: FormState = {
   buy_link: "",
   shipping_rules: "",
   return_policy: "",
+  assigned_pages: [],
 };
 
 export default function Products() {
   const { data: products, isLoading } = useProducts();
+  const { data: fbPages } = usePages();
   const createMut = useCreateProduct();
   const updateMut = useUpdateProduct();
   const deleteMut = useDeleteProduct();
@@ -44,6 +48,8 @@ export default function Products() {
   const [imagePreview, setImagePreview] = useState<string>("");
   const [docFile, setDocFile] = useState<File | null>(null);
 
+  const activePages = fbPages?.filter(p => p.is_active) || [];
+
   const openModal = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
@@ -51,10 +57,11 @@ export default function Products() {
         sku: product.sku,
         name: product.name,
         description: product.description || "",
-        price: product.price.toString(),
+        price: product.price ? product.price.toString() : "",
         buy_link: product.buy_link || "",
         shipping_rules: product.shipping_rules || "",
         return_policy: product.return_policy || "",
+        assigned_pages: product.assigned_pages || [],
       });
       setImagePreview(product.image_url || "");
     } else {
@@ -80,6 +87,15 @@ export default function Products() {
     if (file) setDocFile(file);
   };
 
+  const togglePage = (pageId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      assigned_pages: prev.assigned_pages.includes(pageId)
+        ? prev.assigned_pages.filter(id => id !== pageId)
+        : [...prev.assigned_pages, pageId],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -87,12 +103,13 @@ export default function Products() {
       fd.append("sku", formData.sku);
       fd.append("name", formData.name);
       fd.append("description", formData.description);
-      fd.append("price", formData.price);
+      if (formData.price) fd.append("price", formData.price);
       fd.append("currency", "VND");
       fd.append("buyLink", formData.buy_link);
       fd.append("shippingRules", formData.shipping_rules);
       fd.append("returnPolicy", formData.return_policy);
       fd.append("keywords", formData.name.toLowerCase().split(" ").join(","));
+      fd.append("assignedPages", JSON.stringify(formData.assigned_pages));
       if (imageFile) fd.append("image", imageFile);
       if (docFile) fd.append("document", docFile);
 
@@ -102,7 +119,7 @@ export default function Products() {
         toast({ title: "Đã cập nhật sản phẩm", description: "AI đang cập nhật bản tóm tắt..." });
       } else {
         await createMut.mutateAsync(fd);
-        toast({ title: "Đã tạo sản phẩm", description: "AI đã tự động tạo bản tóm tắt." });
+        toast({ title: "Đã tạo sản phẩm", description: "AI đã tự động đọc trang sản phẩm và tạo bản tóm tắt." });
       }
       setIsModalOpen(false);
     } catch (error: any) {
@@ -128,6 +145,11 @@ export default function Products() {
     } catch (error: any) {
       toast({ title: "Lỗi", description: error.message, variant: "destructive" });
     }
+  };
+
+  const getPageName = (pageId: string) => {
+    const page = fbPages?.find(p => p.page_id === pageId);
+    return page?.page_name || pageId;
   };
 
   return (
@@ -170,10 +192,23 @@ export default function Products() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Giá:</span>
-                  <span className="font-semibold text-primary">{Number(p.price).toLocaleString()} {p.currency}</span>
-                </div>
+                {p.price && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Giá:</span>
+                    <span className="font-semibold text-primary">{Number(p.price).toLocaleString()} {p.currency}</span>
+                  </div>
+                )}
+
+                {p.assigned_pages && p.assigned_pages.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Facebook className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    {p.assigned_pages.map(pageId => (
+                      <Badge key={pageId} variant="outline" className="text-xs text-blue-400 border-blue-500/30">
+                        {getPageName(pageId)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
 
                 {p.ai_summary && (
                   <div className="p-3 rounded-lg bg-violet-500/5 border border-violet-500/20">
@@ -246,7 +281,7 @@ export default function Products() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingProduct ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
-        description="AI sẽ tự động đọc và tóm tắt thông tin sản phẩm sau khi lưu."
+        description="AI sẽ tự động đọc trang sản phẩm và tóm tắt thông tin sau khi lưu."
       >
         <form onSubmit={handleSubmit} className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
           <div className="space-y-2">
@@ -289,14 +324,13 @@ export default function Products() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Giá (VND)</label>
+              <label className="text-sm font-medium">Giá (VND) <span className="text-muted-foreground font-normal">— tùy chọn</span></label>
               <Input
                 type="number"
                 step="1000"
                 value={formData.price}
                 onChange={(e) => setFormData({...formData, price: e.target.value})}
-                required
-                placeholder="299000"
+                placeholder="Để trống nếu chưa có"
               />
             </div>
           </div>
@@ -314,7 +348,7 @@ export default function Products() {
           <div className="space-y-2">
             <label className="text-sm font-medium flex items-center gap-2">
               <ShoppingCart className="w-4 h-4 text-muted-foreground" />
-              Link mua hàng
+              Link mua hàng <span className="text-xs text-violet-400 font-normal">(AI sẽ tự đọc trang này)</span>
             </label>
             <Input
               type="url"
@@ -322,6 +356,49 @@ export default function Products() {
               onChange={(e) => setFormData({...formData, buy_link: e.target.value})}
               placeholder="https://store.example.com/san-pham"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Facebook className="w-4 h-4 text-blue-400" />
+              Gắn với Page
+            </label>
+            {activePages.length > 0 ? (
+              <div className="space-y-2">
+                {activePages.map(page => (
+                  <button
+                    key={page.page_id}
+                    type="button"
+                    onClick={() => togglePage(page.page_id)}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
+                      formData.assigned_pages.includes(page.page_id)
+                        ? "border-blue-500/50 bg-blue-500/10"
+                        : "border-border/50 hover:border-border"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        formData.assigned_pages.includes(page.page_id) ? "bg-blue-500/20" : "bg-secondary"
+                      }`}>
+                        <Facebook className={`w-4 h-4 ${formData.assigned_pages.includes(page.page_id) ? "text-blue-400" : "text-muted-foreground"}`} />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-medium">{page.page_name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">ID: {page.page_id}</p>
+                      </div>
+                    </div>
+                    {formData.assigned_pages.includes(page.page_id) && (
+                      <Check className="w-5 h-5 text-blue-400" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl border border-dashed border-border/50 text-center">
+                <p className="text-xs text-muted-foreground">Chưa có Page nào được kết nối.</p>
+                <p className="text-xs text-muted-foreground">Vào <strong>Cài đặt</strong> để kết nối Facebook Page.</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -414,13 +491,28 @@ export default function Products() {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-lg bg-secondary/50">
                 <p className="text-xs text-muted-foreground">Giá</p>
-                <p className="font-semibold text-primary">{Number(viewingProduct.price).toLocaleString()} {viewingProduct.currency}</p>
+                <p className="font-semibold text-primary">
+                  {viewingProduct.price ? `${Number(viewingProduct.price).toLocaleString()} ${viewingProduct.currency}` : "Chưa cung cấp"}
+                </p>
               </div>
               <div className="p-3 rounded-lg bg-secondary/50">
                 <p className="text-xs text-muted-foreground">Trạng thái</p>
                 <p className="font-semibold">{viewingProduct.is_active ? "Đang hoạt động" : "Tạm dừng"}</p>
               </div>
             </div>
+
+            {viewingProduct.assigned_pages && viewingProduct.assigned_pages.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1"><Facebook className="w-3 h-3 text-blue-400" /> Gắn với Page</p>
+                <div className="flex flex-wrap gap-2">
+                  {viewingProduct.assigned_pages.map(pageId => (
+                    <Badge key={pageId} variant="outline" className="text-blue-400 border-blue-500/30">
+                      {getPageName(pageId)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {viewingProduct.buy_link && (
               <div>

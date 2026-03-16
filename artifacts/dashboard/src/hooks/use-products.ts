@@ -6,7 +6,7 @@ export type Product = {
   sku: string;
   name: string;
   description: string;
-  price: string | number;
+  price: string | number | null;
   currency: string;
   buy_link: string;
   image_url: string;
@@ -16,6 +16,7 @@ export type Product = {
   product_docs: string;
   ai_summary: string;
   keywords: string[];
+  assigned_pages: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
