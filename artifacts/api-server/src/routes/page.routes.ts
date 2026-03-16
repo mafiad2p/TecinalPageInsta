@@ -7,7 +7,7 @@ import { REDIS_KEYS } from "../config/constants.js";
 
 const router = Router();
 const log = childLogger({ module: "page-routes" });
-const FB_API = "https://graph.facebook.com/v21.0";
+const FB_API = "https://graph.facebook.com/v19.0";
 
 router.get("/pages", async (_req: Request, res: Response) => {
   try {
@@ -152,7 +152,7 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
 
   try {
     const result = await pool.query(
-      "SELECT access_token FROM facebook_pages WHERE page_id = $1 AND is_active = true",
+      "SELECT access_token, instagram_account_id FROM facebook_pages WHERE page_id = $1 AND is_active = true",
       [pageId]
     );
     if (result.rows.length === 0) {
@@ -160,22 +160,19 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
       return;
     }
 
-    const { access_token } = result.rows[0];
-
-    const payload: Record<string, unknown> = {
-      recipient: { id: recipientId },
-      message: { text: message },
-    };
-    if (platform !== "INSTAGRAM") {
-      payload.messaging_type = "RESPONSE";
-    }
+    const { access_token, instagram_account_id } = result.rows[0];
 
     const fbResult = await axios.post(
       `${FB_API}/me/messages`,
-      payload,
+      {
+        recipient: { id: recipientId },
+        message: { text: message },
+        messaging_type: "MESSAGE_TAG",
+        tag: "HUMAN_AGENT",
+      },
       { params: { access_token } }
     );
-    res.json({ success: true, platform: platform || "FACEBOOK", response: fbResult.data });
+    res.json({ success: true, platform: platform || "FACEBOOK", instagram_account_id, response: fbResult.data });
   } catch (err: any) {
     const fbError = err.response?.data?.error;
     log.error({ err: fbError || err.message }, "Test send failed");
@@ -187,6 +184,99 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
       fb_error_type: fbError?.type,
       fb_fbtrace_id: fbError?.fbtrace_id,
     });
+  }
+});
+
+router.post("/pages/:pageId/diagnose-send", async (req: Request, res: Response) => {
+  const { pageId } = req.params;
+  const { recipientId } = req.body;
+
+  if (!recipientId) {
+    res.status(400).json({ success: false, error: "recipientId là bắt buộc" });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT access_token, instagram_account_id FROM facebook_pages WHERE page_id = $1 AND is_active = true",
+      [pageId]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, error: "Page không tìm thấy" });
+      return;
+    }
+
+    const { access_token, instagram_account_id } = result.rows[0];
+    const testMsg = "Test from OpenClaw diagnostic";
+    const results: Record<string, any> = {};
+
+    const tests = [
+      {
+        name: "v19_human_agent",
+        url: `https://graph.facebook.com/v19.0/me/messages`,
+        body: { recipient: { id: recipientId }, message: { text: testMsg }, messaging_type: "MESSAGE_TAG", tag: "HUMAN_AGENT" },
+      },
+      {
+        name: "v19_response",
+        url: `https://graph.facebook.com/v19.0/me/messages`,
+        body: { recipient: { id: recipientId }, message: { text: testMsg }, messaging_type: "RESPONSE" },
+      },
+      {
+        name: "v19_no_type",
+        url: `https://graph.facebook.com/v19.0/me/messages`,
+        body: { recipient: { id: recipientId }, message: { text: testMsg } },
+      },
+      {
+        name: "v21_human_agent",
+        url: `https://graph.facebook.com/v21.0/me/messages`,
+        body: { recipient: { id: recipientId }, message: { text: testMsg }, messaging_type: "MESSAGE_TAG", tag: "HUMAN_AGENT" },
+      },
+      {
+        name: "v21_response",
+        url: `https://graph.facebook.com/v21.0/me/messages`,
+        body: { recipient: { id: recipientId }, message: { text: testMsg }, messaging_type: "RESPONSE" },
+      },
+      {
+        name: "v21_no_type",
+        url: `https://graph.facebook.com/v21.0/me/messages`,
+        body: { recipient: { id: recipientId }, message: { text: testMsg } },
+      },
+    ];
+
+    if (instagram_account_id) {
+      tests.push(
+        {
+          name: "v19_ig_endpoint",
+          url: `https://graph.facebook.com/v19.0/${instagram_account_id}/messages`,
+          body: { recipient: { id: recipientId }, message: { text: testMsg } },
+        },
+        {
+          name: "v21_ig_endpoint",
+          url: `https://graph.facebook.com/v21.0/${instagram_account_id}/messages`,
+          body: { recipient: { id: recipientId }, message: { text: testMsg } },
+        }
+      );
+    }
+
+    for (const test of tests) {
+      try {
+        const resp = await axios.post(test.url, test.body, { params: { access_token } });
+        results[test.name] = { success: true, data: resp.data };
+      } catch (err: any) {
+        const fbErr = err.response?.data?.error;
+        results[test.name] = {
+          success: false,
+          error_code: fbErr?.code,
+          error_subcode: fbErr?.error_subcode,
+          error_message: fbErr?.message,
+          error_type: fbErr?.type,
+        };
+      }
+    }
+
+    res.json({ success: true, recipient_id: recipientId, results });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
