@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from "express";
+import axios from "axios";
 import { pool } from "@workspace/db";
 import { childLogger } from "../core/logger.js";
 import { cacheDel } from "../memory/redis.cache.js";
@@ -55,6 +56,115 @@ router.put("/pages/:pageId", async (req: Request, res: Response) => {
   } catch (err) {
     log.error({ err }, "Failed to update page");
     res.status(500).json({ success: false, error: "Failed to update page" });
+  }
+});
+
+router.post("/pages/:pageId/test-token", async (req: Request, res: Response) => {
+  const { pageId } = req.params;
+  try {
+    const result = await pool.query(
+      "SELECT access_token, page_name, instagram_account_id FROM facebook_pages WHERE page_id = $1 AND is_active = true",
+      [pageId]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, error: "Page không tìm thấy" });
+      return;
+    }
+
+    const { access_token, page_name, instagram_account_id } = result.rows[0];
+
+    const fbResult = await axios.get(`https://graph.facebook.com/v19.0/me`, {
+      params: { access_token, fields: "id,name" },
+    });
+
+    const response: any = {
+      success: true,
+      data: {
+        page_name,
+        page_id: pageId,
+        fb_api_response: fbResult.data,
+        token_valid: true,
+        instagram_account_id,
+      },
+    };
+
+    if (instagram_account_id) {
+      try {
+        const igResult = await axios.get(`https://graph.facebook.com/v19.0/${instagram_account_id}`, {
+          params: { access_token, fields: "id,username,name,profile_picture_url" },
+        });
+        response.data.instagram = igResult.data;
+      } catch (igErr: any) {
+        response.data.instagram_error = igErr.response?.data?.error?.message || igErr.message;
+      }
+    }
+
+    const permsResult = await axios.get(`https://graph.facebook.com/v19.0/${pageId}/subscribed_apps`, {
+      params: { access_token },
+    });
+    response.data.subscribed_fields = permsResult.data;
+
+    res.json(response);
+  } catch (err: any) {
+    const fbError = err.response?.data?.error;
+    res.status(400).json({
+      success: false,
+      error: fbError?.message || err.message,
+      fb_error_code: fbError?.code,
+      fb_error_subcode: fbError?.error_subcode,
+      token_valid: false,
+    });
+  }
+});
+
+router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
+  const { pageId } = req.params;
+  const { recipientId, message, platform } = req.body;
+
+  if (!recipientId || !message) {
+    res.status(400).json({ success: false, error: "recipientId và message là bắt buộc" });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      "SELECT access_token, instagram_account_id FROM facebook_pages WHERE page_id = $1 AND is_active = true",
+      [pageId]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ success: false, error: "Page không tìm thấy" });
+      return;
+    }
+
+    const { access_token, instagram_account_id } = result.rows[0];
+
+    if (platform === "INSTAGRAM" && instagram_account_id) {
+      const igResult = await axios.post(
+        `https://graph.facebook.com/v19.0/${instagram_account_id}/messages`,
+        { recipient: { id: recipientId }, message: { text: message } },
+        { params: { access_token } }
+      );
+      res.json({ success: true, platform: "INSTAGRAM", response: igResult.data });
+    } else {
+      const fbResult = await axios.post(
+        `https://graph.facebook.com/v19.0/me/messages`,
+        {
+          recipient: { id: recipientId },
+          message: { text: message },
+          messaging_type: "RESPONSE",
+        },
+        { params: { access_token } }
+      );
+      res.json({ success: true, platform: "FACEBOOK", response: fbResult.data });
+    }
+  } catch (err: any) {
+    const fbError = err.response?.data?.error;
+    log.error({ err: fbError || err.message }, "Test send failed");
+    res.status(400).json({
+      success: false,
+      error: fbError?.message || err.message,
+      fb_error_code: fbError?.code,
+    });
   }
 });
 
