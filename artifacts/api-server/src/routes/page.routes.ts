@@ -162,6 +162,20 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
 
     const { access_token, instagram_account_id } = result.rows[0];
 
+    let takeThreadResult = null;
+    if (platform === "FACEBOOK") {
+      try {
+        const ttc = await axios.post(
+          `${FB_API}/me/take_thread_control`,
+          { recipient: { id: recipientId } },
+          { params: { access_token } }
+        );
+        takeThreadResult = { success: true, data: ttc.data };
+      } catch (ttcErr: any) {
+        takeThreadResult = { success: false, error: ttcErr.response?.data?.error?.message || ttcErr.message };
+      }
+    }
+
     const fbResult = await axios.post(
       `${FB_API}/me/messages`,
       {
@@ -172,7 +186,7 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
       },
       { params: { access_token } }
     );
-    res.json({ success: true, platform: platform || "FACEBOOK", instagram_account_id, response: fbResult.data });
+    res.json({ success: true, platform: platform || "FACEBOOK", instagram_account_id, takeThreadResult, response: fbResult.data });
   } catch (err: any) {
     const fbError = err.response?.data?.error;
     log.error({ err: fbError || err.message }, "Test send failed");
