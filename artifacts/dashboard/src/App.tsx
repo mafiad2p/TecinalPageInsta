@@ -12,6 +12,7 @@ import Scenarios from "@/pages/scenarios";
 import PagesConfig from "@/pages/pages-config";
 import Reports from "@/pages/reports";
 import Logs from "@/pages/logs";
+import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -34,6 +35,7 @@ function Router() {
         <Route path="/pages" component={PagesConfig} />
         <Route path="/reports" component={Reports} />
         <Route path="/logs" component={Logs} />
+        <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

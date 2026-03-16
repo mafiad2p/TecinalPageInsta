@@ -9,7 +9,8 @@ import {
   FileText,
   Terminal,
   Activity,
-  Bot
+  Bot,
+  Settings
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -26,6 +27,7 @@ const navItems = [
   { href: "/pages", label: "Trang FB", icon: Facebook },
   { href: "/reports", label: "Báo cáo", icon: FileText },
   { href: "/logs", label: "Nhật ký hệ thống", icon: Terminal },
+  { href: "/settings", label: "Cài đặt", icon: Settings },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
