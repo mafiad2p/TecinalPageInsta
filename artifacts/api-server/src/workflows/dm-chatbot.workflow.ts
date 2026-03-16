@@ -90,7 +90,7 @@ async function sendReply(
     { platform: message.platform, recipientId: message.senderId, pageId: page.pageId },
     "Sending reply via Messenger Platform /me/messages"
   );
-  await sendDM(page.pageId, page.accessToken, message.senderId, replyText);
+  await sendDM(page.pageId, page.accessToken, message.senderId, replyText, message.platform);
 }
 
 async function getConfirmationReply(intent: string, _content: string): Promise<string> {

@@ -162,13 +162,17 @@ router.post("/pages/:pageId/test-send", async (req: Request, res: Response) => {
 
     const { access_token } = result.rows[0];
 
+    const payload: Record<string, unknown> = {
+      recipient: { id: recipientId },
+      message: { text: message },
+    };
+    if (platform !== "INSTAGRAM") {
+      payload.messaging_type = "RESPONSE";
+    }
+
     const fbResult = await axios.post(
       `${FB_API}/me/messages`,
-      {
-        recipient: { id: recipientId },
-        message: { text: message },
-        messaging_type: "RESPONSE",
-      },
+      payload,
       { params: { access_token } }
     );
     res.json({ success: true, platform: platform || "FACEBOOK", response: fbResult.data });

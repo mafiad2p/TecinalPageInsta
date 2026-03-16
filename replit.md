@@ -29,7 +29,7 @@ OpenClaw is an AI-powered social media automation system for Facebook and Instag
 - **Queue**: BullMQ + Redis
 - **AI**: OpenAI GPT-4o
 - **Alerts**: Telegram Bot
-- **Integrations**: Facebook Graph API v19.0, Instagram API
+- **Integrations**: Facebook Graph API v21.0, Instagram via Messenger Platform
 
 ## Project Structure
 ```
@@ -67,6 +67,7 @@ lib/
 - **v1.0** — Giao diện tiếng Việt + trang Cài đặt kết nối Facebook/Instagram + Backend OAuth
 - **v1.1** — Nâng cấp Sản phẩm: upload ảnh, file tài liệu, quy định vận chuyển, chính sách đổi trả, link mua hàng, AI tự động tóm tắt
 - **v1.2** — Giá tùy chọn, AI scrape link mua hàng, gắn sản phẩm↔Page (product_pages junction table), auto-migration khi server khởi động (không cần chạy SQL thủ công trên Railway)
+- **v1.3** — Nâng Graph API v19→v21, Instagram DM gửi qua Messenger Platform `/me/messages` (không dùng `/{igAccountId}/messages`), Instagram không gửi `messaging_type`, token debug endpoint, sửa Facebook Messenger sendDM dùng `RESPONSE` trước
 
 ## Auto-Migration
 - File: `artifacts/api-server/src/db/migrate.ts`

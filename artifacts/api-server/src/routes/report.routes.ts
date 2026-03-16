@@ -105,14 +105,21 @@ router.get("/reports/dm-logs", async (req: Request, res: Response) => {
 router.get("/reports/webhook-debug", async (req: Request, res: Response) => {
   const { limit = "20" } = req.query as Record<string, string>;
   try {
+    const tableCheck = await pool.query(
+      "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'webhook_debug')"
+    );
+    if (!tableCheck.rows[0]?.exists) {
+      res.json({ success: true, data: [], message: "webhook_debug table does not exist yet" });
+      return;
+    }
     const result = await pool.query(
       "SELECT * FROM webhook_debug ORDER BY created_at DESC LIMIT $1",
       [parseInt(limit)]
     );
     res.json({ success: true, data: result.rows });
-  } catch (err) {
-    log.error({ err }, "Failed to fetch webhook debug");
-    res.status(500).json({ success: false, error: "Failed to fetch webhook debug" });
+  } catch (err: any) {
+    log.error({ err: err.message }, "Failed to fetch webhook debug");
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
